@@ -1,0 +1,44 @@
+[
+  {
+    "ticket_id": "T-1001",
+    "subject": "Double charged for my subscription",
+    "message": "Hi, I was billed twice for my monthly subscription payment this month. My invoice shows two identical charges. Can you look into this billing issue and let me know what happens next?",
+    "language": "en",
+    "customer_name": "Alex"
+  },
+  {
+    "ticket_id": "T-1002",
+    "subject": "App keeps crashing on startup",
+    "message": "The application crashes with an error every time I try to load it. It was working yesterday but now it is completely broken and I cannot use it. Please help me fix this bug.",
+    "language": "en",
+    "customer_name": "Priya"
+  },
+  {
+    "ticket_id": "T-1003",
+    "subject": "Locked out of my account",
+    "message": "I cannot log in. My password reset link is not working and my account seems locked after several sign in attempts. I need to regain access to my account.",
+    "language": "en",
+    "customer_name": "Sam"
+  },
+  {
+    "ticket_id": "T-1004",
+    "subject": "Where is my delivery",
+    "message": "My package was supposed to arrive last week. The tracking has not updated and the courier shows no delivery date. When will my order ship and arrive?",
+    "language": "en",
+    "customer_name": "Chen"
+  },
+  {
+    "ticket_id": "T-1005",
+    "subject": "Extremely unhappy - considering legal action",
+    "message": "This is absolutely unacceptable. Your service has cost me money and nobody responds. I am angry and I am considering contacting my lawyer and taking legal action. I want this escalated to a manager immediately.",
+    "language": "en",
+    "customer_name": "Jordan"
+  },
+  {
+    "ticket_id": "T-1006",
+    "subject": "No puedo acceder a mi cuenta",
+    "message": "Hola, no puedo iniciar sesion en mi cuenta y necesito ayuda urgente para recuperar el acceso. Mi contrasena no funciona.",
+    "language": "es",
+    "customer_name": "María"
+  }
+]

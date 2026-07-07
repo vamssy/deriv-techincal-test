@@ -1,0 +1,38 @@
+[
+  {
+    "policy_id": "P-REFUND",
+    "title": "Billing and Refund Policy",
+    "content": "Customers who are charged twice or billed incorrectly for a subscription or payment may be eligible for a review. Duplicate charges and invoice disputes are investigated by the billing team. Do not promise or approve a refund directly; explain that the billing team will review the charge and follow up.",
+    "tags": ["billing", "refund", "charge", "invoice", "subscription", "payment"]
+  },
+  {
+    "policy_id": "P-TECH",
+    "title": "Technical Troubleshooting Policy",
+    "content": "For application errors, crashes, and bugs, first ask the customer for the error message, app version, and device. Suggest restarting and reinstalling. If the app is broken or fails to load after basic steps, create a technical support ticket for engineering.",
+    "tags": ["technical", "error", "crash", "bug", "app", "troubleshooting"]
+  },
+  {
+    "policy_id": "P-ACCOUNT",
+    "title": "Account Access and Security Policy",
+    "content": "For login problems, locked accounts, and password reset failures, verify identity before restoring access. Explain how to use the account recovery flow and sign in again. Never share credentials over email.",
+    "tags": ["account", "login", "password", "access", "locked", "security"]
+  },
+  {
+    "policy_id": "P-SHIP",
+    "title": "Shipping and Delivery Policy",
+    "content": "For delivery delays and missing packages, check the tracking and courier status. Delivery dates are estimates. If a package is delayed beyond the estimate, open a shipping investigation with the carrier and keep the customer informed.",
+    "tags": ["shipping", "delivery", "package", "tracking", "courier", "order"]
+  },
+  {
+    "policy_id": "P-TONE",
+    "title": "Communication and Tone Policy",
+    "content": "Always respond with empathy and a calm, professional tone, especially with frustrated or angry customers. Acknowledge the customer's feelings, avoid making promises you cannot keep, and never guarantee outcomes. Be clear about the next step.",
+    "tags": ["tone", "safety", "communication", "empathy", "escalation"]
+  },
+  {
+    "policy_id": "P-ESCAL",
+    "title": "Escalation and Complaints Handling Policy",
+    "content": "Complaints involving legal threats, lawyers, regulators, threats to leave, or demands for a manager must be escalated to a specialist team. Do not attempt to resolve or close the case yourself. Communicate clearly that the case has been escalated and that a specialist will follow up with the next steps.",
+    "tags": ["escalation", "complaint", "legal", "manager", "safety"]
+  }
+]

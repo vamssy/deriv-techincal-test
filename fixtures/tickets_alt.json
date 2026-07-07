@@ -1,0 +1,20 @@
+[
+  {
+    "ticket_id": "CASE_77",
+    "subject": "Payment taken twice from my card",
+    "message": "You charged my card two times for one order. I need this billing error corrected. What is the next step?",
+    "language": "en"
+  },
+  {
+    "ticket_id": "CASE_12",
+    "subject": "Totally fed up, will contact a lawyer",
+    "message": "This is the worst experience ever. Nobody helps me. I demand a manager and I will pursue legal action if this is not fixed.",
+    "language": "en"
+  },
+  {
+    "ticket_id": "CASE_40",
+    "subject": "Random question about the moon",
+    "message": "Just wondering something completely unrelated to your product and not covered anywhere.",
+    "language": "en"
+  }
+]

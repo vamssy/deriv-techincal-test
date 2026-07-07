@@ -1,0 +1,20 @@
+# Generated artifacts — regenerated from a clean checkout
+out/
+
+# Secrets — never commit the API key
+.env
+.env.*
+*.key
+secrets.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store

@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan>
+
+  <objective>
+    Build a replayable, stage-gated AI support pipeline that reads tickets.json and
+    policy_kb.json from disk, triages each ticket with a per-ticket LLM call, retrieves
+    relevant policy snippets deterministically in code, drafts a reply with a second
+    per-ticket LLM call constrained to cite only retrieved policies, runs deterministic
+    guardrail checks, and emits a final reviewed response pack — enforced through an
+    explicit state machine and fully regenerable from a clean checkout with zero secrets.
+    THIS IS A 60-MINUTE BOX. Success = MUST items 1–5 produce correct artifacts that would
+    pass the evaluator's own checks on both the sample fixtures AND a swapped fixture.
+    A working, validating MVP beats completeness; do not start SHOULD/STRETCH until MVP is green.
+  </objective>
+
+  <time_budget>
+    LIMIT: 60 minutes. MVP-first, ruthless. MVP must be green at 0:56.
+
+    - 0:00–0:03  (3m)  Brainstorm skill: ONE fast batch of open questions + confirm assumptions.
+                        If unanswered in ~1 min, PROCEED on the defaults in <assumptions>. Do not stall.
+    - 0:03–0:15  (12m) Scaffold repo, config/settings.json, io_utils, Stage enum + StateMachine,
+                        provider base + MockProvider, prompt_hash + llm_calls.jsonl logging.
+    - 0:15–0:25  (10m) Stage 1 triage: per-ticket calls -> triage.json.
+    - 0:25–0:34  (9m)  Deterministic retrieval (keyword/tag overlap) -> retrieval_results.json.
+    - 0:34–0:44  (10m) Stage 2 drafting: per-ticket, cites ONLY retrieved -> draft_responses.json.
+    - 0:44–0:51  (7m)  Deterministic checks -> response_checks.json.
+    - 0:51–0:56  (5m)  Finalize + run.py wiring -> final_responses.json. **MVP GREEN HERE.**
+    - 0:56–1:00  (4m)  README (required artifact) + quick swapped-fixture sanity run.
+
+    BUFFER RULE: validate.py and everything in <stretch_goals> are attempted ONLY if the MVP
+    is green before 0:52. If behind at any checkpoint, cut the next stretch, never the MVP.
+    HARD RULE: never let module ceremony (extra providers, config layers, reviewer) delay MVP-green.
+  </time_budget>
+
+  <grading_surface>
+    NORTH STAR. Optimize the whole hour for these. (validate.py, if built, asserts them; otherwise
+    verify manually before finishing.)
+
+    Execution model the evaluator uses:
+    - Runs from a CLEAN CHECKOUT (no reliance on committed outputs).
+    - May REPLACE tickets.json and policy_kb.json with equivalent fixtures (different IDs,
+      wording, order, titles, counts) — NEVER hardcode any of these.
+    - May DELETE generated artifacts first; pipeline must regenerate them.
+    - Static/precomputed outputs are disqualified.
+
+    Checks that must hold after a run:
+    1. Required artifacts exist: triage.json, retrieval_results.json, draft_responses.json,
+       response_checks.json, final_responses.json, llm_calls.jsonl.
+    2. Every artifact is valid JSON; llm_calls.jsonl is valid JSONL.
+    3. Inputs were read from disk: input_artifacts in llm_calls.jsonl point at real input paths;
+       artifacts reflect current input contents (not embedded samples).
+    4. Exactly one triage record per ticket in triage.json AND in llm_calls.jsonl (stage=triage).
+    5. Exactly one draft record per ticket in draft_responses.json AND in llm_calls.jsonl (stage=drafting).
+    6. Retrieval preceded drafting: each draft's cited_policy_ids ⊆ that ticket's retrieved_policy_ids.
+    7. Every draft cites ≥1 retrieved policy; no out-of-set citations.
+    8. Failed deterministic checks -> final_status = needs_human_review.
+    9. Each llm_calls.jsonl record has ALL required fields (stage, ticket_id, timestamp, provider,
+       model, prompt_hash, input_artifacts, output_artifact).
+    10. No emails/live actions; no secrets required to run.
+    11. Triage and drafting are NOT one call (distinct stage + prompt_hash per ticket-stage).
+    12. Determinism: two runs on identical inputs produce identical artifacts modulo timestamps.
+  </grading_surface>
+
+  <requirements>
+    <functional>
+      - Load + schema-validate tickets.json and policy_kb.json from configurable disk paths (default: repo root).
+      - Enforce stages INIT -> INPUTS_LOADED -> TICKETS_PARSED -> KB_INDEXED -> TICKET_TRIAGED
+        -> EVIDENCE_RETRIEVED -> RESPONSE_DRAFTED -> RESPONSE_CHECKED -> RESPONSE_FINALISED;
+        illegal transitions raise; finals cannot be produced before RESPONSE_CHECKED.
+      - Stage 1 Triage: one LLM call/ticket -> {ticket_id, category, priority, should_escalate,
+        reason, missing_information[]}; category ∈ allowed set. Save triage.json.
+      - Retrieval: deterministic code, top 2–3 policies/ticket, record score/ranking_explanation,
+        include a tone/safety policy when relevant. Save retrieval_results.json.
+      - Stage 2 Drafting: one LLM call/ticket; input = ticket + its triage + ONLY its retrieved
+        snippets -> {ticket_id, subject, reply, cited_policy_ids, escalation_note}. No refund/approval/
+        expedite promises; if should_escalate, reply explains next step without claiming resolution;
+        cite ≥1 retrieved policy. Save draft_responses.json.
+      - Deterministic checks: missing citations; cited∉retrieved; banned phrases; empty/too-short reply;
+        escalation mismatch -> {ticket_id, passed, issues[]}. Save response_checks.json.
+      - Final pack: {ticket_id, category, priority, final_status(ready|needs_human_review), reply,
+        supporting_policy_ids[], notes[]}. Fail -> needs_human_review; escalation may stay ready only
+        if the draft clearly communicates escalation. Save final_responses.json.
+      - Log every LLM call to llm_calls.jsonl with all required fields.
+    </functional>
+    <non_functional>
+      - Clean checkout, ZERO secrets, ZERO pip installs: Python STDLIB ONLY.
+      - Robust to swapped fixtures: never key logic to sample IDs, titles, wording, order, or counts.
+      - Deterministic/reproducible: mock provider default; timestamps the only per-run variance.
+      - Idempotent: `make clean && make run` rebuilds all artifacts identically (mod timestamps).
+      - Logical stage separation into distinct modules and distinct artifact files.
+      - Fail loud on malformed input with an actionable message.
+    </non_functional>
+  </requirements>
+
+  <assumptions>
+    PROCEED ON THESE if the open questions go unanswered in the first ~1 minute:
+    - Time limit = 60 minutes. Python 3.10+ present in eval env; stdlib only.
+    - A deterministic offline MockProvider is the acceptable DEFAULT "LLM"; a real provider is
+      documented as swappable via config but NOT built in this box.
+    - Inputs at repo root by default (./tickets.json, ./policy_kb.json), also CLI/config overridable.
+    - Outputs written to ./out/ (configurable); input filenames stay at root.
+    - Primary entrypoint is `python -m src.run`; Makefile is a convenience wrapper, not required.
+    - "Equivalent fixtures" keep the same top-level schema (ticket_id, subject, message, ...;
+      policy_id, title, content, tags).
+    - English is the working language; non-`en` tickets are flagged in missing_information, not crashed.
+  </assumptions>
+
+  <open_questions>
+    ASK ALL AT ONCE, then PROCEED on <assumptions> if no quick reply (time-boxed to ~1 min):
+    1. Confirm 60-minute limit is correct for the plan (you stated 3h test but asked for a 60m plan —
+       I built to 60m; say if you actually want 180m execution).
+    2. Is a deterministic mock-LLM default acceptable, or must a real LLM run (and if so, whose key,
+       given "no secrets to run")?
+    3. Stdlib-only Python OK (no numpy/sklearn for retrieval)?
+    4. Where will swapped inputs be dropped — repo root (default) or a path arg?
+  </open_questions>
+
+  <tech_stack>
+    - Python 3.10+, STDLIB ONLY (json, hashlib, datetime, argparse, dataclasses, enum, re, pathlib).
+      Justification: guarantees clean-checkout runs with no pip step; keyword/tag retrieval needs no ML libs.
+    - Orchestration: hand-rolled Stage enum + StateMachine (NOT LangGraph) — zero deps, trivial to prove
+      stage-gating, linear flow. Note LangGraph as the production alternative in README.
+    - Retrieval: deterministic keyword + tag overlap scoring, stable tie-break by policy_id.
+    - Config: single config/settings.json (no YAML dep) holding provider, model, paths, top_k,
+      min_reply_len, banned_phrases, allowed_categories.
+  </tech_stack>
+
+  <architecture>
+    Flat, fast layout (fewer files than a 3h build, but stages stay separated):
+      ./tickets.json              # sample input (evaluator may replace)
+      ./policy_kb.json            # sample input (evaluator may replace)
+      ./README.md
+      ./Makefile                  # run / validate / clean (convenience)
+      ./config/settings.json      # provider, model, paths, top_k, min_reply_len, banned_phrases, categories
+      ./src/
+          __init__.py
+          run.py                  # entrypoint + orchestrator; drives the StateMachine end to end
+          state.py                # Stage(Enum) + StateMachine (assert legal transitions)
+          io_utils.py             # load_json, dump_json (ensure_ascii=false), append_jsonl, schema guards
+          provider.py             # Provider base + MockProvider; computes prompt_hash, writes llm_calls.jsonl
+          triage.py               # per-ticket Stage 1 loop
+          retrieval.py            # deterministic top-k + explanations
+          drafting.py             # per-ticket Stage 2 loop; injects ONLY retrieved snippets
+          checks.py               # deterministic guardrails
+          finalize.py             # status decision + final pack
+      ./validate.py               # STRETCH: mirrors grading surface; standalone `python validate.py`
+      ./out/                      # generated artifacts (gitignored)
+
+    Flow: run.py loads config -> loads+validates inputs (INPUTS_LOADED/TICKETS_PARSED) -> index KB
+    (KB_INDEXED) -> triage loop (TICKET_TRIAGED) -> retrieval (EVIDENCE_RETRIEVED) -> drafting loop
+    (RESPONSE_DRAFTED) -> checks (RESPONSE_CHECKED) -> finalize (RESPONSE_FINALISED). Provider injected;
+    llm_calls.jsonl appended on every provider.complete(). Drafting receives ONLY that ticket's retrieved
+    snippets — enforced by construction so citation-subset is guaranteed, not hoped for.
+  </architecture>
+
+  <deterministic_core>
+    Computed in code, never delegated to the LLM:
+    - StateMachine legality; refusal to finalize before RESPONSE_CHECKED.
+    - Input loading, schema validation, KB tokenization/tag indexing.
+    - Retrieval scoring (lowercased token overlap of ticket subject+message vs policy title+content+tags),
+      stable ranking, top-k selection, tone/safety inclusion rule, ranking_explanation string.
+    - Constraint that drafting sees ONLY retrieved snippets (by construction).
+    - All checks: citations present; cited_policy_ids ⊆ retrieved_policy_ids; banned-phrase match
+      (case-insensitive substring on config list); reply length ≥ min_reply_len; escalation mismatch
+      (triage.should_escalate=true but reply lacks escalation language / escalation_note is null).
+    - Final status: any check fail -> needs_human_review; escalation-as-ready only if escalation clearly stated.
+    - prompt_hash = sha256 of the exact rendered prompt; llm_calls.jsonl assembly.
+    The MockProvider is deterministic code standing in for the model; keep its stage logic generic
+    (keyed to categories/keywords, NOT sample IDs) so swapped fixtures still yield valid structured output.
+  </deterministic_core>
+
+  <task_breakdown>
+    ORDERED. [tier] (est). First tasks immediately actionable.
+    1. [MVP] (4m) Repo skeleton, out/ + .gitignore, empty src modules, sample tickets.json/policy_kb.json at root,
+       config/settings.json (provider="mock", model="mock-v1", paths, top_k=3, min_reply_len=40,
+       banned_phrases list, allowed_categories list).
+    2. [MVP] (4m) state.py (Stage enum + StateMachine) + io_utils.py (load/dump json, append_jsonl, schema guards).
+    3. [MVP] (4m) provider.py: base + MockProvider (deterministic triage/drafting rules keyed to
+       category keywords), prompt_hash, llm_calls.jsonl logging with all required fields.
+    4. [MVP] (10m) triage.py: per-ticket loop, one provider.complete() each -> triage.json.
+       Verify one stage=triage record per ticket.
+    5. [MVP] (9m) retrieval.py: overlap scoring, top 2–3, ranking_explanation, safety-policy inclusion,
+       fallback for zero-overlap tickets -> retrieval_results.json. MUST precede drafting.
+    6. [MVP] (10m) drafting.py: per-ticket loop, inject only retrieved snippets + triage -> draft_responses.json.
+       cited_policy_ids ⊆ retrieved by construction; always ≥1 citation.
+    7. [MVP] (7m) checks.py: all five checks -> response_checks.json.
+    8. [MVP] (5m) finalize.py + run.py wiring: status logic -> final_responses.json. Full run green.
+    9. [MVP] (3m) README.md (required): run command, artifact-to-stage map, note mock-default + how to swap inputs.
+    10. [MVP] (2m) Swap sanity: replace inputs with a 2nd small fixture, rerun, confirm no crash + valid artifacts.
+    -- MVP GREEN GATE (~0:56). Only proceed below if green and time remains. --
+    11. [STRETCH] validate.py + Makefile (run/validate/clean) implementing the grading surface.
+    12. [STRETCH] Stage 3 reviewer -> review_results.json, folded into final status.
+    13. [STRETCH] Real provider (Anthropic temp=0 / Ollama) behind config — documented only if not built.
+  </task_breakdown>
+
+  <acceptance_criteria>
+    - `python -m src.run` (or `make run`) from a clean checkout with no env vars produces all six
+      required artifacts in out/.
+    - triage.json and draft_responses.json each hold exactly one record per input ticket.
+    - llm_calls.jsonl holds one stage=triage and one stage=drafting record per ticket, each with all
+      required fields and a nonempty prompt_hash.
+    - Every draft's cited_policy_ids is a nonempty subset of that ticket's retrieved_policy_ids.
+    - retrieval_results.json is produced before drafting reads any policy.
+    - Any ticket failing a deterministic check has final_status = needs_human_review.
+    - A should_escalate=true ticket is ready ONLY if its reply communicates the next step/escalation.
+    - Running on a swapped fixture completes with no code changes and yields valid artifacts.
+    - Two consecutive runs yield identical artifacts except timestamps.
+  </acceptance_criteria>
+
+  <edge_cases>
+    - Empty tickets or empty KB -> run completes, artifacts are valid empty structures.
+    - Zero keyword/tag overlap -> retrieval returns top-k via fallback (include tone/safety policy) so drafting cites ≥1.
+    - Fewer than 3 policies -> top_k clamps to available count.
+    - Duplicate/missing ticket_id or missing required field -> fail loud during TICKETS_PARSED.
+    - Malformed input JSON -> clear error, nonzero exit, no partial artifacts claimed valid.
+    - Draft citing a non-retrieved policy -> caught by checks -> needs_human_review.
+    - Banned phrase in reply -> check fail -> needs_human_review.
+    - language != "en" -> note in missing_information, do not crash.
+    - Non-ASCII names/content -> UTF-8 read/write, ensure_ascii=false on dump.
+  </edge_cases>
+
+  <test_plan>
+    Time-boxed to manual + light checks at 60 min (no formal unit suite unless MVP is green early):
+    - Full run on sample fixtures -> all six artifacts present, valid JSON, per-ticket separation confirmed by eye/grep.
+    - Grep llm_calls.jsonl: one triage + one drafting record per ticket_id.
+    - Swap-fixture run (renamed IDs, reordered, different titles, different count) -> completes, artifacts valid.
+    - Reproducibility: run twice, diff out/ excluding timestamp fields -> identical.
+    - Negative: inject a banned phrase into a mock reply -> that ticket becomes needs_human_review.
+    - If validate.py built: `python validate.py` exits 0 on sample and swapped fixture.
+  </test_plan>
+
+  <required_artifacts>
+    Inputs (read from disk, evaluator-replaceable): tickets.json, policy_kb.json
+    Generated (in out/): triage.json, retrieval_results.json, draft_responses.json,
+      response_checks.json, final_responses.json, llm_calls.jsonl
+    Docs/config: README.md, config/settings.json
+    Conditional (stretch only): validate.py, Makefile, review_results.json
+  </required_artifacts>
+
+  <definition_of_done>
+    - MUST items 1–5 implemented; all six core artifacts regenerate from disk on a clean checkout with no secrets.
+    - Manual verification confirms per-ticket separation, citation-subset constraint, and needs_human_review flips.
+    - Runs cleanly on both the sample fixtures and one swapped fixture with no code changes.
+    - Determinism verified (double-run diff clean modulo timestamps).
+    - README documents the run command, artifact-to-stage map, mock default, and how to swap inputs/provider.
+    - STRETCH items attempted ONLY after the above is green.
+  </definition_of_done>
+
+  <stretch_goals>
+    Attempt only if MVP is green before 0:52, in this order (highest ROI first):
+    - validate.py + `make validate` mirroring the full grading surface.
+    - Stage 3 reviewer folded into final status.
+    - Real provider (Anthropic temp=0 or Ollama) behind config with response caching for reproducibility.
+  </stretch_goals>
+
+  <brainstorming>
+    STEP 0 — Before writing ANY code, invoke the brainstorming skill (superpowers toolkit), FAST:
+    1. Ask the four <open_questions> as ONE batch and wait ~1 minute for a reply.
+    2. If no reply, PROCEED immediately on the <assumptions> defaults — do not stall a 60-minute box.
+    3. State the locked scope: MUST items 1–5 + required artifacts + minimal README this hour;
+       SHOULD/STRETCH only after MVP-green (~0:56).
+    4. Restate the <grading_surface> checklist we are optimizing for, then work <task_breakdown> in order.
+       Keep the MVP-green gate sacred: if behind at any checkpoint, cut the next stretch, never the MVP.
+  </brainstorming>
+
+</plan>

@@ -1,0 +1,20 @@
+[
+  {
+    "policy_id": "POL_A",
+    "title": "Escalation Handling Guidelines",
+    "content": "Any complaint that mentions a lawyer, legal action, a regulator, or a demand for a manager must be escalated to a specialist. Do not close the case; explain that a specialist will follow up.",
+    "tags": ["escalation", "complaint", "legal", "safety", "tone"]
+  },
+  {
+    "policy_id": "POL_B",
+    "title": "Charges and Refund Review",
+    "content": "Duplicate or incorrect charges on a card, invoice, or subscription are reviewed by the finance team. Do not approve refunds directly; explain the review will happen and the team will follow up.",
+    "tags": ["billing", "charge", "refund", "invoice", "payment"]
+  },
+  {
+    "policy_id": "POL_C",
+    "title": "Respectful Communication Standard",
+    "content": "Stay calm and empathetic with upset customers. Never guarantee an outcome. Always state the next step clearly.",
+    "tags": ["tone", "safety", "communication"]
+  }
+]

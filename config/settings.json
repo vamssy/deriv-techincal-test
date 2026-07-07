@@ -1,0 +1,38 @@
+{
+  "provider": "auto",
+  "model": "z-ai/glm-5.2",
+  "base_url": "https://integrate.api.nvidia.com/v1",
+  "mock_model": "mock-v1",
+  "temperature": 0,
+  "request_timeout": 60,
+  "input_paths": {
+    "tickets": "tickets.json",
+    "policy_kb": "policy_kb.json"
+  },
+  "out_dir": "out",
+  "top_k": 3,
+  "min_reply_len": 40,
+  "allowed_categories": [
+    "billing",
+    "technical",
+    "account",
+    "shipping",
+    "product",
+    "complaint",
+    "general"
+  ],
+  "banned_phrases": [
+    "full refund",
+    "guaranteed refund",
+    "we will refund",
+    "your refund is approved",
+    "approved your refund",
+    "refund has been issued",
+    "refund has been processed",
+    "money-back guarantee",
+    "we guarantee",
+    "100% guarantee",
+    "we approve",
+    "expedited shipping approved"
+  ]
+}
