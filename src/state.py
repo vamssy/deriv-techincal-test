@@ -1,6 +1,7 @@
 """Explicit stage state machine.
 
-Enforces the pipeline order and refuses to produce finals before RESPONSE_CHECKED.
+Enforces the pipeline order and refuses to produce finals before RESPONSE_REVIEWED
+(the orchestrator guards finalize with ``require(Stage.RESPONSE_REVIEWED)``).
 Illegal transitions raise, so a bug in the orchestrator fails loud instead of
 silently emitting artifacts out of order.
 """

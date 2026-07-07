@@ -1,0 +1,49 @@
+name: CI
+
+# Triggers on pushes and pull requests targeting main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Regenerate + validate (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # No dependency-install step: this project is stdlib-only (no pip install,
+      # no requirements.txt, no virtualenv). Even the NVIDIA call uses urllib
+      # from the standard library, so setup-python alone is a complete toolchain.
+
+      # All steps run with NO secrets. With NVIDIA_API_KEY absent, the pipeline
+      # defaults to the deterministic mock provider, so CI is fully reproducible.
+      - name: Print Python version
+        run: python --version
+
+      - name: Regenerate artifacts (clean-checkout run)
+        run: python -m src.run
+
+      - name: Validate grading surface (24 checks)
+        run: python validate.py
+
+      - name: Run unit tests (if present)
+        run: |
+          if [ -d tests ]; then
+            python -m unittest discover -s tests -v
+          else
+            echo "no tests dir"
+          fi

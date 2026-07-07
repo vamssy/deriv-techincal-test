@@ -4,6 +4,7 @@ out/
 # Secrets — never commit the API key
 .env
 .env.*
+!.env.example
 *.key
 secrets.*
 
